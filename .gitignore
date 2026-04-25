@@ -1,0 +1,147 @@
+## .NET & Visual Studio — moderno y pragmático
+## Basado en Dotnet.gitignore + ajustes multi-IDE y anti-compilados.
+
+# === Build / compilación / artefactos ===
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+artifacts/
+[Ll]og/
+[Ll]ogs/
+# Mantener carpetas vacías con .gitkeep (opcional):
+!Logs/.gitkeep
+!artifacts/.gitkeep
+
+# === Publicación (dotnet publish / VS) ===
+**/publish/
+**/_PublishedWebsites/
+**/AppPackages/
+*.appx
+*.appxbundle
+*.msix
+*.msixbundle
+*.appxupload
+# Si zipeas salidas publicadas:
+*.zip
+*.tar
+*.tar.gz
+
+# === Binarios y símbolos (bloqueo anti compilados sueltos) ===
+*.exe
+*.dll
+*.pdb
+*.so
+*.dylib
+*.a
+*.lib
+
+# === Archivos runtime/deps generados al compilar/publicar ===
+*.deps.json
+*.runtimeconfig.json
+*.runtimeconfig.dev.json
+*.dll.config
+*.exe.config
+
+# === Documentación XML generada por el compilador (opcional) ===
+# Descomenta si NO deseas versionarla:
+#*.xml
+
+# === .NET Core (legado) ===
+project.lock.json
+project.fragment.lock.json
+
+# === Scaffolding ASP.NET ===
+ScaffoldingReadMe.txt
+
+# === NuGet ===
+.nuget
+*.nupkg
+*.snupkg
+# packages.lock.json conviene versionarlo si usan lockfile (no lo ignores).
+
+# === Logs / diagnósticos de MSBuild / pruebas ===
+*.binlog
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.trx
+*.VisualState.xml
+TestResult.xml
+nunit-*.xml
+
+# === Cobertura de pruebas ===
+coverage/
+coverage*.xml
+coverage*.json
+coverage*.info
+*.coverage
+*.coveragexml
+CodeCoverage/
+
+# === IDEs y archivos de usuario (no compartibles) ===
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+# Rider / JetBrains
+.idea/
+*.sln.iml
+# VS Code (decidir si compartir configuraciones del workspace)
+#.vscode/
+
+# === Publicación / perfiles ===
+*.pubxml.user
+# Para ignorar todos los perfiles si contienen secretos locales:
+# Properties/PublishProfiles/*.pubxml
+
+# === Azure Functions (secrets locales) ===
+local.settings.json
+
+# === Config de app (buenas prácticas) ===
+# Versionar appsettings.json y appsettings.{Env}.json, pero NO variantes locales:
+appsettings.*.local.json
+
+# === Certificados / claves locales ===
+*.pfx
+*.p12
+*.key
+
+# === Herramientas / análisis ===
+.ReSharper*/
+*.[Rr]e[Ss]harper
+StyleCop.ReSharper.Caches/
+BenchmarkDotNet.Artifacts/
+.sonar/
+.sonarqube/
+
+# === Archivos temporales / SO ===
+~$*
+*~
+*.tmp
+*.temp
+*.DS_Store
+Thumbs.db
+
+# === Bases de datos locales / utilitarios ===
+*.mdf
+*.ldf
+*.db
+*.dbmdl
+
+# === Monorepo con front-end (opcional, descomenta si aplica) ===
+# node_modules/
+# dist/
+# build/
+# .next/
+# .nuxt/
+# *.map

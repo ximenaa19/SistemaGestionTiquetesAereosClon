@@ -1,0 +1,178 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.*" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.*">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.15">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.*" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="10.*" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.*" />
+    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="temp_build_output\**\*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="src\Modules\Addresses\" />
+    <Folder Include="src\Modules\Addresses\Application\" />
+    <Folder Include="src\Modules\Addresses\Application\Interfaces\" />
+    <Folder Include="src\Modules\Addresses\Application\Services\" />
+    <Folder Include="src\Modules\Addresses\Application\UseCases\" />
+    <Folder Include="src\Modules\Addresses\Domain\" />
+    <Folder Include="src\Modules\Addresses\Domain\Aggregate\" />
+    <Folder Include="src\Modules\Addresses\Domain\Repositories\" />
+    <Folder Include="src\Modules\Addresses\Domain\ValueObject\" />
+    <Folder Include="src\Modules\Addresses\Infrastructure\" />
+    <Folder Include="src\Modules\Addresses\Infrastructure\Entity\" />
+    <Folder Include="src\Modules\Addresses\Infrastructure\Repository\" />
+    <Folder Include="src\Modules\Addresses\UI\" />
+    <Folder Include="src\Modules\Airlines\" />
+    <Folder Include="src\Modules\Airlines\Application\" />
+    <Folder Include="src\Modules\Airlines\Application\Interfaces\" />
+    <Folder Include="src\Modules\Airlines\Application\Services\" />
+    <Folder Include="src\Modules\Airlines\Application\UseCases\" />
+    <Folder Include="src\Modules\Airlines\Domain\" />
+    <Folder Include="src\Modules\Airlines\Domain\Aggregate\" />
+    <Folder Include="src\Modules\Airlines\Domain\Repositories\" />
+    <Folder Include="src\Modules\Airlines\Domain\ValueObject\" />
+    <Folder Include="src\Modules\Airlines\Infrastructure\" />
+    <Folder Include="src\Modules\Airlines\Infrastructure\Entity\" />
+    <Folder Include="src\Modules\Airlines\Infrastructure\Repository\" />
+    <Folder Include="src\Modules\Airlines\UI\" />
+    <Folder Include="src\Modules\Cities\Application\" />
+    <Folder Include="src\Modules\Cities\Application\Interfaces\" />
+    <Folder Include="src\Modules\Cities\Application\Services\" />
+    <Folder Include="src\Modules\Cities\Application\UseCases\" />
+    <Folder Include="src\Modules\Cities\Domain\Repositories\" />
+    <Folder Include="src\Modules\Cities\Infrastructure\Repository\" />
+    <Folder Include="src\Modules\Cities\UI\" />
+    <Folder Include="src\Modules\Continents\Domain\Repositories\" />
+    <Folder Include="src\Modules\Continents\Infrastructure\Repository\" />
+    <Folder Include="src\Modules\Continents\UI\" />
+    <Folder Include="src\Modules\Countries\Application\" />
+    <Folder Include="src\Modules\Countries\Application\Interfaces\" />
+    <Folder Include="src\Modules\Countries\Application\Services\" />
+    <Folder Include="src\Modules\Countries\Application\UseCases\" />
+    <Folder Include="src\Modules\Countries\Domain\Repositories\" />
+    <Folder Include="src\Modules\Countries\Infrastructure\Repository\" />
+    <Folder Include="src\Modules\Countries\UI\" />
+    <Folder Include="src\Modules\DocumentTypes\" />
+    <Folder Include="src\Modules\DocumentTypes\Application\" />
+    <Folder Include="src\Modules\DocumentTypes\Application\Interfaces\" />
+    <Folder Include="src\Modules\DocumentTypes\Application\Services\" />
+    <Folder Include="src\Modules\DocumentTypes\Application\UseCases\" />
+    <Folder Include="src\Modules\DocumentTypes\Domain\" />
+    <Folder Include="src\Modules\DocumentTypes\Domain\Aggregate\" />
+    <Folder Include="src\Modules\DocumentTypes\Domain\Repositories\" />
+    <Folder Include="src\Modules\DocumentTypes\Domain\ValueObject\" />
+    <Folder Include="src\Modules\DocumentTypes\Infrastructure\" />
+    <Folder Include="src\Modules\DocumentTypes\Infrastructure\Entity\" />
+    <Folder Include="src\Modules\DocumentTypes\Infrastructure\Repository\" />
+    <Folder Include="src\Modules\DocumentTypes\UI\" />
+    <Folder Include="src\Modules\EmailDomains\" />
+    <Folder Include="src\Modules\EmailDomains\Application\" />
+    <Folder Include="src\Modules\EmailDomains\Application\Interfaces\" />
+    <Folder Include="src\Modules\EmailDomains\Application\Services\" />
+    <Folder Include="src\Modules\EmailDomains\Application\UseCases\" />
+    <Folder Include="src\Modules\EmailDomains\Domain\" />
+    <Folder Include="src\Modules\EmailDomains\Domain\Aggregate\" />
+    <Folder Include="src\Modules\EmailDomains\Domain\Repositories\" />
+    <Folder Include="src\Modules\EmailDomains\Domain\ValueObject\" />
+    <Folder Include="src\Modules\EmailDomains\Infrastructure\" />
+    <Folder Include="src\Modules\EmailDomains\Infrastructure\Entity\" />
+    <Folder Include="src\Modules\EmailDomains\Infrastructure\Repository\" />
+    <Folder Include="src\Modules\EmailDomains\UI\" />
+    <Folder Include="src\Modules\People\" />
+    <Folder Include="src\Modules\People\Application\" />
+    <Folder Include="src\Modules\People\Application\Interfaces\" />
+    <Folder Include="src\Modules\People\Application\Services\" />
+    <Folder Include="src\Modules\People\Application\UseCases\" />
+    <Folder Include="src\Modules\People\Domain\" />
+    <Folder Include="src\Modules\People\Domain\Aggregate\" />
+    <Folder Include="src\Modules\People\Domain\Repositories\" />
+    <Folder Include="src\Modules\People\Domain\ValueObject\" />
+    <Folder Include="src\Modules\People\Infrastructure\" />
+    <Folder Include="src\Modules\People\Infrastructure\Entity\" />
+    <Folder Include="src\Modules\People\Infrastructure\Repository\" />
+    <Folder Include="src\Modules\People\UI\" />
+    <Folder Include="src\Modules\PersonEmails\" />
+    <Folder Include="src\Modules\PersonEmails\Application\" />
+    <Folder Include="src\Modules\PersonEmails\Application\Interfaces\" />
+    <Folder Include="src\Modules\PersonEmails\Application\Services\" />
+    <Folder Include="src\Modules\PersonEmails\Application\UseCases\" />
+    <Folder Include="src\Modules\PersonEmails\Domain\" />
+    <Folder Include="src\Modules\PersonEmails\Domain\Aggregate\" />
+    <Folder Include="src\Modules\PersonEmails\Domain\Repositories\" />
+    <Folder Include="src\Modules\PersonEmails\Domain\ValueObject\" />
+    <Folder Include="src\Modules\PersonEmails\Infrastructure\" />
+    <Folder Include="src\Modules\PersonEmails\Infrastructure\Entity\" />
+    <Folder Include="src\Modules\PersonEmails\Infrastructure\Repository\" />
+    <Folder Include="src\Modules\PersonEmails\UI\" />
+    <Folder Include="src\Modules\PersonPhones\" />
+    <Folder Include="src\Modules\PersonPhones\Application\" />
+    <Folder Include="src\Modules\PersonPhones\Application\Interfaces\" />
+    <Folder Include="src\Modules\PersonPhones\Application\Services\" />
+    <Folder Include="src\Modules\PersonPhones\Application\UseCases\" />
+    <Folder Include="src\Modules\PersonPhones\Domain\" />
+    <Folder Include="src\Modules\PersonPhones\Domain\Aggregate\" />
+    <Folder Include="src\Modules\PersonPhones\Domain\Repositories\" />
+    <Folder Include="src\Modules\PersonPhones\Domain\ValueObject\" />
+    <Folder Include="src\Modules\PersonPhones\Infrastructure\" />
+    <Folder Include="src\Modules\PersonPhones\Infrastructure\Entity\" />
+    <Folder Include="src\Modules\PersonPhones\Infrastructure\Repository\" />
+    <Folder Include="src\Modules\PersonPhones\UI\" />
+    <Folder Include="src\Modules\PhoneCodes\" />
+    <Folder Include="src\Modules\PhoneCodes\Application\" />
+    <Folder Include="src\Modules\PhoneCodes\Application\Interfaces\" />
+    <Folder Include="src\Modules\PhoneCodes\Application\Services\" />
+    <Folder Include="src\Modules\PhoneCodes\Application\UseCases\" />
+    <Folder Include="src\Modules\PhoneCodes\Domain\" />
+    <Folder Include="src\Modules\PhoneCodes\Domain\Aggregate\" />
+    <Folder Include="src\Modules\PhoneCodes\Domain\Repositories\" />
+    <Folder Include="src\Modules\PhoneCodes\Domain\ValueObject\" />
+    <Folder Include="src\Modules\PhoneCodes\Infrastructure\" />
+    <Folder Include="src\Modules\PhoneCodes\Infrastructure\Entity\" />
+    <Folder Include="src\Modules\PhoneCodes\Infrastructure\Repository\" />
+    <Folder Include="src\Modules\PhoneCodes\UI\" />
+    <Folder Include="src\Modules\Regions\Aplication\" />
+    <Folder Include="src\Modules\Regions\Aplication\Interfaces\" />
+    <Folder Include="src\Modules\Regions\Aplication\Services\" />
+    <Folder Include="src\Modules\Regions\Aplication\UseCases\" />
+    <Folder Include="src\Modules\Regions\Domain\Repositories\" />
+    <Folder Include="src\Modules\Regions\Infrastructure\Repository\" />
+    <Folder Include="src\Modules\Regions\UI\" />
+    <Folder Include="src\Modules\RoadTypes\Application\Interfaces\" />
+    <Folder Include="src\Modules\RoadTypes\Application\Services\" />
+    <Folder Include="src\Modules\RoadTypes\Domain\" />
+    <Folder Include="src\Modules\RoadTypes\Domain\Aggregate\" />
+    <Folder Include="src\Modules\RoadTypes\Domain\Repositories\" />
+    <Folder Include="src\Modules\RoadTypes\Domain\ValueObject\" />
+    <Folder Include="src\Modules\RoadTypes\Infrastructure\" />
+    <Folder Include="src\Modules\RoadTypes\Infrastructure\Entity\" />
+    <Folder Include="src\Modules\RoadTypes\Infrastructure\Repository\" />
+    <Folder Include="src\Modules\RoadTypes\UI\" />
+  </ItemGroup>
+
+</Project>
