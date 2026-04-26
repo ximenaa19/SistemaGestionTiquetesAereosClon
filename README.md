@@ -2,6 +2,12 @@
 
 Aplicación de consola en `.NET` para gestionar operación aérea, comercial y administrativa de una aerolínea: personas/usuarios, aerolíneas, aeropuertos, rutas, vuelos, reservas, pagos, tiquetes, check-ins, catálogos y reportes con LINQ.
 
+## Para la rama examen
+
+La seccion del examen ibucacada en la rama `feature/examen-gomez_manuel` cuenta con seeders para especificamente simular datos de prueba en un cliente creado atraves de los mismos, con este se podra probar el procedimiento.
+Esto crea un cliente de usernmae "jnazar" y clave "Jnazar123" para el rol `Cliente`.
+Con esto, se puede ejecutar el proyecto y ver los cambios realizados en el menu de  `Cliente`.
+
 ## Tabla de contenido
 - [Descripción](#descripción)
 - [Funcionalidades principales](#funcionalidades-principales)
