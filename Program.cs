@@ -32,6 +32,7 @@ using GestionAerolineas.src.Modules.Flights;
 using GestionAerolineas.src.Modules.FlightSeats;
 using GestionAerolineas.src.Modules.FlightStates;
 using GestionAerolineas.src.Modules.FlightStatusTransitions;
+using GestionAerolineas.src.Modules.FlightStates.Application.UseCases;
 using GestionAerolineas.src.Modules.InvoiceItems;
 using GestionAerolineas.src.Modules.InvoiceItemTypes;
 using GestionAerolineas.src.Modules.Invoices;
@@ -94,6 +95,32 @@ using GestionAerolineas.src.Modules.PaymentStates.Application.UseCases;
 using GestionAerolineas.src.Modules.PaymentStates.Infrastructure.Repository;
 using GestionAerolineas.src.Modules.PaymentMethods.Application.UseCases;
 using GestionAerolineas.src.Modules.PaymentMethods.Infrastructure.Repository;
+using GestionAerolineas.src.Modules.Addresses.Infrastructure.Repository;
+using GestionAerolineas.src.Modules.Airlines.Application.UseCases;
+using GestionAerolineas.src.Modules.Airlines.Infrastructure.Repository;
+using GestionAerolineas.src.Modules.Airports.Application.UseCases;
+using GestionAerolineas.src.Modules.Airports.Infrastructure.Repository;
+using GestionAerolineas.src.Modules.DocumentTypes.Application.UseCases;
+using GestionAerolineas.src.Modules.DocumentTypes.Infrastructure.Repository;
+using GestionAerolineas.src.Modules.Flights.Application.UseCases;
+using GestionAerolineas.src.Modules.Flights.Infrastructure.Repository;
+using GestionAerolineas.src.Modules.FlightStates.Infrastructure.Repository;
+using GestionAerolineas.src.Modules.Passengers.Application.Interfaces;
+using GestionAerolineas.src.Modules.Passengers.Application.Services;
+using GestionAerolineas.src.Modules.PassengerTypes.Application.UseCases;
+using GestionAerolineas.src.Modules.PassengerTypes.Infrastructure.Repository;
+using GestionAerolineas.src.Modules.People.Application.Interfaces;
+using GestionAerolineas.src.Modules.People.Application.Services;
+using GestionAerolineas.src.Modules.People.Application.UseCases;
+using GestionAerolineas.src.Modules.People.Infrastructure.Repository;
+using GestionAerolineas.src.Modules.ReservationFlights.Application.Interfaces;
+using GestionAerolineas.src.Modules.ReservationFlights.Application.Services;
+using GestionAerolineas.src.Modules.ReservationPassengers.Application.UseCases;
+using GestionAerolineas.src.Modules.ReservationPassengers.Application.Interfaces;
+using GestionAerolineas.src.Modules.ReservationPassengers.Application.Services;
+using GestionAerolineas.src.Modules.Reservations.UI;
+using GestionAerolineas.src.Modules.Routes.Application.UseCases;
+using GestionAerolineas.src.Modules.Routes.Infrastructure.Repository;
 using GestionAerolineas.src.shared.Helpers;
 using GestionAerolineas.src.shared.Seed;
 using GestionAerolineas.src.shared.Ui.RoleMenus;
@@ -426,6 +453,17 @@ try
         var reservationPassengerRepository = new ReservationPassengerRepository(context);
         var reservationStatusRepository = new ReservationStatusRepository(context);
         var reservationStatusTransitionRepository = new ReservationStatusTransitionRepository(context);
+        var reservationWaitlistRepository = new ReservationWaitlistRepository(context);
+        var reservationRescheduleHistoryRepository = new ReservationRescheduleHistoryRepository(context);
+        var flightRepository = new FlightRepository(context);
+        var flightStateRepository = new FlightStateRepository(context);
+        var airlineRepository = new AirlineRepository(context);
+        var routeRepository = new RouteRepository(context);
+        var airportRepository = new AirportRepository(context);
+        var personRepository = new PersonRepository(context);
+        var documentTypeRepository = new DocumentTypeRepository(context);
+        var addressRepository = new AddressRepository(context);
+        var passengerTypeRepository = new PassengerTypeRepository(context);
         var ticketRepository = new TicketRepository(context);
         var ticketStatusRepository = new TicketStatusRepository(context);
         var paymentRepository = new PaymentRepository(context);
@@ -443,15 +481,124 @@ try
         var getAllTicketStatuses = new GetAllTicketStatusesUseCase(ticketStatusRepository);
         var getAllPaymentStates = new GetAllPaymentStatesUseCase(paymentStateRepository);
         var getAllPaymentMethods = new GetAllPaymentMethodsUseCase(paymentMethodRepository);
+        var getAllFlights = new GetAllFlightsUseCase(flightRepository);
+        var getFlightById = new GetFlightByIdUseCase(flightRepository);
+        var getAllFlightStates = new GetAllFlightStatesUseCase(flightStateRepository);
+        var getAllAirlines = new GetAllAirlinesUseCase(airlineRepository);
+        var getAllRoutes = new GetAllRoutesUseCase(routeRepository);
+        var getAllAirports = new GetAllAirportsUseCase(airportRepository);
+        var getAllDocumentTypes = new GetAllDocumentTypesUseCase(documentTypeRepository);
+        var getAllPassengerTypes = new GetAllPassengerTypesUseCase(passengerTypeRepository);
+        var getPersonByDocument = new GetPersonByDocumentUseCase(personRepository);
 
         var reservationValidator = new ReservationValidator(
             reservationRepository,
             customerRepository,
             reservationStatusRepository,
             reservationStatusTransitionRepository);
+        IReservationFlightValidator reservationFlightValidator = new ReservationFlightValidator(
+            reservationFlightRepository,
+            reservationRepository,
+            flightRepository,
+            flightStateRepository,
+            reservationStatusRepository,
+            reservationPassengerRepository);
+        IReservationPassengerValidator reservationPassengerValidator = new ReservationPassengerValidator(
+            reservationPassengerRepository,
+            reservationFlightRepository,
+            passengerRepository,
+            reservationRepository,
+            reservationStatusRepository,
+            flightRepository);
+        IPersonValidator personValidator = new PersonValidator(
+            personRepository,
+            documentTypeRepository,
+            addressRepository);
+        IPassengerValidator passengerValidator = new PassengerValidator(
+            passengerRepository,
+            personRepository,
+            passengerTypeRepository);
+
+        var createReservation = new CreateReservationUseCase(
+            reservationRepository,
+            reservationValidator);
+        var createReservationFlight = new CreateReservationFlightUseCase(
+            reservationFlightRepository,
+            reservationFlightValidator,
+            reservationRepository);
+        var updateReservationFlight = new UpdateReservationFlightUseCase(
+            reservationFlightRepository,
+            reservationFlightValidator,
+            reservationRepository);
+        var createReservationPassenger = new CreateReservationPassengerUseCase(
+            reservationPassengerRepository,
+            reservationPassengerValidator,
+            reservationFlightRepository,
+            flightRepository);
+        var createPerson = new CreatePersonUseCase(personRepository, personValidator);
+        var createPassenger = new CreatePassengerUseCase(passengerRepository, passengerValidator);
+
         var updateReservationStatus = new GestionAerolineas.src.Modules.Reservations.Application.UseCases.UpdateReservationStatusUseCase(
             reservationRepository,
             reservationValidator);
+        var addReservationToWaitlist = new AddReservationToWaitlistUseCase(
+            reservationRepository,
+            reservationFlightRepository,
+            reservationWaitlistRepository,
+            reservationRescheduleHistoryRepository);
+        var promoteWaitlistForFlight = new PromoteWaitlistForFlightUseCase(
+            reservationWaitlistRepository,
+            reservationRescheduleHistoryRepository,
+            reservationFlightRepository,
+            reservationPassengerRepository,
+            flightRepository,
+            updateReservationFlight);
+        var rescheduleReservation = new RescheduleReservationUseCase(
+            reservationRepository,
+            reservationFlightRepository,
+            reservationPassengerRepository,
+            flightRepository,
+            reservationStatusRepository,
+            updateReservationStatus,
+            updateReservationFlight,
+            reservationRescheduleHistoryRepository,
+            promoteWaitlistForFlight);
+        var cancelReservationForCustomer = new CancelReservationForCustomerUseCase(
+            reservationRepository,
+            reservationFlightRepository,
+            reservationPassengerRepository,
+            flightRepository,
+            reservationStatusRepository,
+            updateReservationStatus,
+            promoteWaitlistForFlight);
+        var customerRescheduleReservationFlow = new CustomerRescheduleReservationFlow(
+            customer.Id.Value,
+            authResult.Username,
+            getReservationsByCustomerId,
+            getReservationDetailsById,
+            getAllReservationStatuses,
+            getAllFlights,
+            getFlightById,
+            getAllFlightStates,
+            rescheduleReservation,
+            addReservationToWaitlist);
+        var customerReservationWizard = new CustomerCreateReservationWizard(
+            customer.Id.Value,
+            authResult.Username,
+            createReservation,
+            createReservationFlight,
+            createReservationPassenger,
+            getAllReservationStatuses,
+            getAllFlights,
+            getAllAirlines,
+            getAllRoutes,
+            getAllAirports,
+            getAllDocumentTypes,
+            createPerson,
+            getPersonByDocument,
+            createPassenger,
+            getPassengerByPersonId,
+            getAllPassengerTypes);
 
         var customerSelfServiceMenu = new CustomerSelfServiceMenu(
             customer.Id.Value,
@@ -467,8 +614,10 @@ try
             getAllPaymentStates,
             getAllPaymentMethods,
             updateReservationStatus,
+            cancelReservationForCustomer,
             () => flightMenu.StartAsync(),
-            () => reservationMenu.StartAsync(),
+            () => customerReservationWizard.StartAsync(),
+            () => customerRescheduleReservationFlow.StartAsync(),
             () => checkinMenu.StartAsync(),
             () => customerProfileMenu.StartAsync(),
             () => customerSecondaryMenu.StartAsync());

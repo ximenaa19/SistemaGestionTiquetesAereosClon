@@ -125,6 +125,8 @@ public class AppDbContext : DbContext
     public DbSet<FlightSeatEntity> FlightSeats { get; set; }
     public DbSet<FlightAssignmentEntity> FlightAssignments { get; set; }
     public DbSet<ReservationEntity> Reservations { get; set; }
+    public DbSet<ReservationWaitlistEntity> ReservationWaitlist { get; set; }
+    public DbSet<ReservationRescheduleHistoryEntity> ReservationRescheduleHistory { get; set; }
     public DbSet<ReservationFlightEntity> ReservationFlights { get; set; }
     public DbSet<ReservationPassengerEntity> ReservationPassengers { get; set; }
     public DbSet<PaymentEntity> Payments { get; set; }

@@ -134,7 +134,7 @@ public class FlightMenu
                         DateTime? rescheduledAt = string.IsNullOrWhiteSpace(resInput) ? null : DateTime.Parse(resInput!);
 
                         await _create.ExecuteAsync(code, airlineId, routeId, aircraftId, departure, arrival, totalCapacity, availableSeats, stateId, rescheduledAt);
-                        Console.WriteLine("âœ” Creado");
+                        Console.WriteLine("Operacion realizada correctamente. Registro creado.");
                         break;
 
                     case 1:
@@ -248,7 +248,7 @@ public class FlightMenu
                         DateTime? newRescheduledAt = string.IsNullOrWhiteSpace(newResInput) ? null : DateTime.Parse(newResInput!);
 
                         await _update.ExecuteAsync(updateId, newCode, newAirlineId, newRouteId, newAircraftId, newDeparture, newArrival, newTotalCapacity, newAvailableSeats, newStateId, newRescheduledAt);
-                        Console.WriteLine("âœ” Actualizado");
+                        Console.WriteLine("Operacion realizada correctamente. Registro actualizado.");
                         break;
 
                     case 9:
@@ -257,7 +257,7 @@ public class FlightMenu
                         int deleteId = int.Parse(Console.ReadLine()!);
 
                         await _delete.ExecuteAsync(deleteId);
-                        Console.WriteLine("âœ” Eliminado");
+                        Console.WriteLine("Operacion realizada correctamente. Registro eliminado.");
                         break;
 
                     case 10:
@@ -266,7 +266,7 @@ public class FlightMenu
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"âŒ Error: {ex.GetBaseException().Message}");
+                Console.WriteLine($"No se pudo completar la operacion: {ex.GetBaseException().Message}");
             }
 
             Console.WriteLine("\nPresiona una tecla para continuar...");

@@ -34,8 +34,10 @@ public sealed class CustomerSelfServiceMenu
     private readonly GetAllPaymentStatesUseCase _getAllPaymentStates;
     private readonly GetAllPaymentMethodsUseCase _getAllPaymentMethods;
     private readonly UpdateReservationStatusUseCase _updateReservationStatus;
+    private readonly CancelReservationForCustomerUseCase _cancelReservationForCustomer;
     private readonly Func<Task> _viewFlightsAction;
     private readonly Func<Task> _createReservationAction;
+    private readonly Func<Task> _rescheduleReservationAction;
     private readonly Func<Task> _checkinAction;
     private readonly Func<Task> _updateProfileAction;
     private readonly Func<Task> _secondaryMenuAction;
@@ -54,8 +56,10 @@ public sealed class CustomerSelfServiceMenu
         GetAllPaymentStatesUseCase getAllPaymentStates,
         GetAllPaymentMethodsUseCase getAllPaymentMethods,
         UpdateReservationStatusUseCase updateReservationStatus,
+        CancelReservationForCustomerUseCase cancelReservationForCustomer,
         Func<Task> viewFlightsAction,
         Func<Task> createReservationAction,
+        Func<Task> rescheduleReservationAction,
         Func<Task> checkinAction,
         Func<Task> updateProfileAction,
         Func<Task> secondaryMenuAction)
@@ -73,8 +77,10 @@ public sealed class CustomerSelfServiceMenu
         _getAllPaymentStates = getAllPaymentStates;
         _getAllPaymentMethods = getAllPaymentMethods;
         _updateReservationStatus = updateReservationStatus;
+        _cancelReservationForCustomer = cancelReservationForCustomer;
         _viewFlightsAction = viewFlightsAction;
         _createReservationAction = createReservationAction;
+        _rescheduleReservationAction = rescheduleReservationAction;
         _checkinAction = checkinAction;
         _updateProfileAction = updateProfileAction;
         _secondaryMenuAction = secondaryMenuAction;
@@ -95,6 +101,7 @@ public sealed class CustomerSelfServiceMenu
             new("Mis pagos", MyPaymentsAsync),
             new("Hacer check-in", CheckinAsync),
             new("Cancelar reserva", CancelReservationAsync),
+            new("Reprogramar reserva", RescheduleReservationAsync),
             new("Actualizar mi perfil basico", UpdateProfileAsync),
             new("Menu secundario", _secondaryMenuAction)
         });
@@ -108,7 +115,36 @@ public sealed class CustomerSelfServiceMenu
     private async Task ViewFlightsAsync()
     {
         PrintContext("Ver vuelos disponibles");
-        await _viewFlightsAction();
+        Console.WriteLine("Se abrira el modulo de vuelos en modo general.");
+        Console.WriteLine("Para consultar disponibilidad, usa la opcion 'Listar flights'.");
+        Console.WriteLine("Presiona una tecla para continuar...");
+        Console.ReadKey();
+
+        try
+        {
+            await _viewFlightsAction();
+            Console.WriteLine("\nOperacion finalizada correctamente.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"\nNo se pudo completar la operacion: {ex.GetBaseException().Message}");
+        }
+    }
+
+    private async Task RescheduleReservationAsync()
+    {
+        PrintContext("Reprogramar reserva");
+        Console.WriteLine("Iniciando flujo de reprogramacion...");
+
+        try
+        {
+            await _rescheduleReservationAction();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"\nNo se pudo completar la operacion: {ex.GetBaseException().Message}");
+            Pause();
+        }
     }
 
     /// <summary>
@@ -117,10 +153,17 @@ public sealed class CustomerSelfServiceMenu
     private async Task CreateReservationAsync()
     {
         PrintContext("Crear reserva");
-        Console.WriteLine($"Usa este customer_id cuando el asistente lo pida: {_customerId}");
-        Console.WriteLine("Presiona una tecla para continuar...");
-        Console.ReadKey();
-        await _createReservationAction();
+        Console.WriteLine("Iniciando wizard de reserva para cliente autenticado...");
+
+        try
+        {
+            await _createReservationAction();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"\nNo se pudo completar la operacion: {ex.GetBaseException().Message}");
+            Pause();
+        }
     }
 
     /// <summary>
@@ -159,23 +202,23 @@ public sealed class CustomerSelfServiceMenu
     private async Task ReservationDetailsAsync()
     {
         PrintContext("Detalle de reserva");
-        Console.Write("Ingresa reservation_id: ");
-        if (!int.TryParse(Console.ReadLine(), out var reservationId))
+        var reservationId = ReadReservationIdOrCancel("Ingresa reservation_id");
+        if (!reservationId.HasValue)
         {
-            Console.WriteLine("ID invalido.");
+            Console.WriteLine("Operacion cancelada.");
             Pause();
             return;
         }
 
         var own = await _getReservationsByCustomerId.ExecuteAsync(_customerId);
-        if (!own.Any(x => x.Id.Value == reservationId))
+        if (!own.Any(x => x.Id.Value == reservationId.Value))
         {
             Console.WriteLine("Esa reserva no pertenece a tu cuenta.");
             Pause();
             return;
         }
 
-        var details = await _getReservationDetailsById.ExecuteAsync(reservationId);
+        var details = await _getReservationDetailsById.ExecuteAsync(reservationId.Value);
         if (details is null)
         {
             Console.WriteLine("No se encontro la reserva.");
@@ -288,7 +331,18 @@ public sealed class CustomerSelfServiceMenu
         Console.WriteLine("Se abrira el modulo de check-in.");
         Console.WriteLine("Presiona una tecla para continuar...");
         Console.ReadKey();
-        await _checkinAction();
+
+        try
+        {
+            await _checkinAction();
+            Console.WriteLine("\nOperacion finalizada. Verifica tus datos en el modulo de check-in.");
+            Pause();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"\nNo se pudo completar la operacion: {ex.GetBaseException().Message}");
+            Pause();
+        }
     }
 
     /// <summary>
@@ -311,15 +365,15 @@ public sealed class CustomerSelfServiceMenu
         foreach (var reservation in reservations)
             Console.WriteLine($"[{reservation.Id.Value}] PNR={reservation.Code?.Value ?? "NULL"} | EstadoId={reservation.StatusId.Value}");
 
-        Console.Write("\nIngresa reservation_id a cancelar: ");
-        if (!int.TryParse(Console.ReadLine(), out var reservationId))
+        var reservationId = ReadReservationIdOrCancel("Ingresa reservation_id a cancelar");
+        if (!reservationId.HasValue)
         {
-            Console.WriteLine("ID invalido.");
+            Console.WriteLine("Operacion cancelada.");
             Pause();
             return;
         }
 
-        var ownReservation = reservations.FirstOrDefault(x => x.Id.Value == reservationId);
+        var ownReservation = reservations.FirstOrDefault(x => x.Id.Value == reservationId.Value);
         if (ownReservation is null)
         {
             Console.WriteLine("Esa reserva no pertenece a tu cuenta.");
@@ -339,8 +393,9 @@ public sealed class CustomerSelfServiceMenu
 
         try
         {
-            await _updateReservationStatus.ExecuteAsync(reservationId, cancelStatus.Id.Value);
+            await _cancelReservationForCustomer.CancelAsync(_customerId, reservationId.Value);
             Console.WriteLine("Reserva cancelada correctamente.");
+            Console.WriteLine("Si habia lista de espera, se intento promover automaticamente.");
         }
         catch (Exception ex)
         {
@@ -386,5 +441,22 @@ public sealed class CustomerSelfServiceMenu
     {
         Console.WriteLine("\nPresiona una tecla para continuar...");
         Console.ReadKey();
+    }
+
+    private static int? ReadReservationIdOrCancel(string label)
+    {
+        while (true)
+        {
+            Console.Write($"\n{label} (000000 cancela): ");
+            var raw = (Console.ReadLine() ?? string.Empty).Trim();
+
+            if (raw == "000000")
+                return null;
+
+            if (int.TryParse(raw, out var reservationId) && reservationId > 0)
+                return reservationId;
+
+            Console.WriteLine("Se requiere un valor valido para poder proceder. Intente nuevamente.");
+        }
     }
 }
