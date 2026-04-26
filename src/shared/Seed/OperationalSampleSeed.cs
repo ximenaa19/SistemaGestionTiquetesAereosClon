@@ -19,6 +19,9 @@ using GestionAerolineas.src.Modules.Reservations.Infrastructure.Entity;
 using GestionAerolineas.src.Modules.Routes.Infrastructure.Entity;
 using GestionAerolineas.src.Modules.Staff.Infrastructure.Entity;
 using GestionAerolineas.src.Modules.Tickets.Infrastructure.Entity;
+using GestionAerolineas.src.Modules.SystemRoles.Infrastructure.Entity;
+using GestionAerolineas.src.Modules.Users.Application.Services;
+using GestionAerolineas.src.Modules.Users.Infrastructure.Entity;
 using GestionAerolineas.src.shared.Context;
 using Microsoft.EntityFrameworkCore;
 
@@ -95,6 +98,15 @@ public static class OperationalSampleSeed
         await EnsureTicketAsync(context, reservationPassenger.Id, ticketStatus.Id, "TCK-DEMO-001");
         var secondReservationPassenger = await EnsureReservationPassengerAsync(context, reservationFlight.Id, secondPassenger.Id);
         await EnsureTicketAsync(context, secondReservationPassenger.Id, ticketStatus.Id, "TCK-DEMO-002");
+
+        await EnsureRescheduleDemoForJnazarAsync(
+            context,
+            documentType.Id,
+            passengerType.Id,
+            airline.Id,
+            route.Id,
+            aircraft.Id,
+            flightState.Id);
     }
 
     private static async Task<PersonEntity> EnsurePersonAsync(
@@ -465,5 +477,196 @@ public static class OperationalSampleSeed
         context.Tickets.Add(ticket);
         await context.SaveChangesAsync();
         return ticket;
+    }
+
+    private static async Task EnsureRescheduleDemoForJnazarAsync(
+        AppDbContext context,
+        int documentTypeId,
+        int passengerTypeId,
+        int airlineId,
+        int routeId,
+        int aircraftId,
+        int flightStateId)
+    {
+        var customerRole = await context.SystemRoles.AsNoTracking()
+            .FirstAsync(x => x.Name != null && x.Name.Trim().ToUpper().Contains("CLIENTE"));
+
+        var confirmedStatus = await context.ReservationStatuses.AsNoTracking()
+            .FirstAsync(x => x.Name != null && x.Name.Trim().ToUpper().Contains("CONFIRM"));
+
+        var person = await EnsurePersonAsync(
+            context,
+            documentTypeId,
+            "JNZRSEED001",
+            "Juan",
+            "Nazar");
+
+        var user = await EnsureUserAsync(
+            context,
+            "jnazar",
+            "Jnazar123!",
+            person.Id,
+            customerRole.Id);
+
+        var customer = await EnsureCustomerAsync(context, user.PersonId!.Value);
+        var passenger = await EnsurePassengerAsync(context, user.PersonId.Value, passengerTypeId);
+
+        var flights = await EnsureRescheduleFlightsAsync(
+            context,
+            airlineId,
+            routeId,
+            aircraftId,
+            flightStateId);
+
+        var reservation = await EnsureReservationByCodeAsync(
+            context,
+            "JNZRRSV001",
+            customer.Id,
+            confirmedStatus.Id,
+            285000m);
+
+        var reservationFlight = await EnsureReservationFlightAsync(context, reservation.Id, flights[0].Id);
+        await EnsureReservationPassengerAsync(context, reservationFlight.Id, passenger.Id);
+    }
+
+    private static async Task<UserEntity> EnsureUserAsync(
+        AppDbContext context,
+        string username,
+        string plainPassword,
+        int personId,
+        int customerRoleId)
+    {
+        var usernameNorm = SeedHelpers.Normalize(username);
+        var existing = await context.Users.FirstOrDefaultAsync(x =>
+            x.Username != null &&
+            x.Username.Trim().ToUpper() == usernameNorm);
+
+        if (existing is not null)
+        {
+            var changed = false;
+            if (!existing.PersonId.HasValue)
+            {
+                existing.PersonId = personId;
+                changed = true;
+            }
+
+            if (existing.RoleId != customerRoleId)
+            {
+                existing.RoleId = customerRoleId;
+                changed = true;
+            }
+
+            if (!existing.IsActive)
+            {
+                existing.IsActive = true;
+                changed = true;
+            }
+
+            if (changed)
+                await context.SaveChangesAsync();
+
+            return existing;
+        }
+
+        var user = new UserEntity
+        {
+            Username = username,
+            PasswordHash = UserPasswordHasher.Hash(plainPassword).Value,
+            PersonId = personId,
+            RoleId = customerRoleId,
+            IsActive = true,
+            LastAccess = null
+        };
+
+        context.Users.Add(user);
+        await context.SaveChangesAsync();
+        return user;
+    }
+
+    private static async Task<List<FlightEntity>> EnsureRescheduleFlightsAsync(
+        AppDbContext context,
+        int airlineId,
+        int routeId,
+        int aircraftId,
+        int stateId)
+    {
+        var result = new List<FlightEntity>();
+        var baseDeparture = DateTime.Today.AddDays(10).AddHours(6);
+
+        for (var i = 1; i <= 7; i++)
+        {
+            var code = $"JNZR{1000 + i}";
+            var departure = baseDeparture.AddDays(i);
+            var arrival = departure.AddMinutes(55);
+
+            var existing = await context.Flights.FirstOrDefaultAsync(x => x.Code == code);
+            if (existing is not null)
+            {
+                existing.AirlineId = airlineId;
+                existing.RouteId = routeId;
+                existing.AircraftId = aircraftId;
+                existing.DepartureDateTime = departure;
+                existing.EstimatedArrivalDateTime = arrival;
+                existing.TotalCapacity = 120;
+                existing.AvailableSeats = Math.Max(existing.AvailableSeats, 20);
+                existing.StateId = stateId;
+                await context.SaveChangesAsync();
+                result.Add(existing);
+                continue;
+            }
+
+            var flight = new FlightEntity
+            {
+                Code = code,
+                AirlineId = airlineId,
+                RouteId = routeId,
+                AircraftId = aircraftId,
+                DepartureDateTime = departure,
+                EstimatedArrivalDateTime = arrival,
+                TotalCapacity = 120,
+                AvailableSeats = 80,
+                StateId = stateId
+            };
+
+            context.Flights.Add(flight);
+            await context.SaveChangesAsync();
+            result.Add(flight);
+        }
+
+        return result.OrderBy(x => x.DepartureDateTime).ToList();
+    }
+
+    private static async Task<ReservationEntity> EnsureReservationByCodeAsync(
+        AppDbContext context,
+        string code,
+        int customerId,
+        int statusId,
+        decimal totalAmount)
+    {
+        var existing = await context.Reservations.FirstOrDefaultAsync(x => x.Code == code);
+        if (existing is not null)
+        {
+            existing.CustomerId = customerId;
+            existing.StatusId = statusId;
+            existing.TotalAmount = totalAmount;
+            existing.ReservedAt = DateTime.Now;
+            existing.ExpiresAt = DateTime.Now.AddHours(4);
+            await context.SaveChangesAsync();
+            return existing;
+        }
+
+        var reservation = new ReservationEntity
+        {
+            Code = code,
+            CustomerId = customerId,
+            ReservedAt = DateTime.Now,
+            StatusId = statusId,
+            TotalAmount = totalAmount,
+            ExpiresAt = DateTime.Now.AddHours(4)
+        };
+
+        context.Reservations.Add(reservation);
+        await context.SaveChangesAsync();
+        return reservation;
     }
 }
