@@ -13,6 +13,7 @@ using GestionAerolineas.src.Modules.AirportAirline;
 using GestionAerolineas.src.Modules.Airports;
 using GestionAerolineas.src.Modules.Auth;
 using GestionAerolineas.src.Modules.AvailabilityStatuses;
+using GestionAerolineas.src.Modules.Baggage;
 using GestionAerolineas.src.Modules.CabinConfiguration;
 using GestionAerolineas.src.Modules.CabinTypes;
 using GestionAerolineas.src.Modules.CardIssuers;
@@ -134,6 +135,7 @@ try
     var reservationPassengerMenu = ReservationPassengerModule.Build(context);
     var ticketMenu = TicketModule.Build(context);
     var checkinMenu = CheckinModule.Build(context);
+    var baggageMenu = BaggageModule.Build(context);
     var paymentMenu = PaymentModule.Build(context);
     var invoiceMenu = InvoiceModule.Build(context);
     var invoiceItemMenu = InvoiceItemModule.Build(context);
@@ -226,7 +228,8 @@ try
         new("Facturas", () => invoiceMenu.StartAsync()),
         new("Items de factura", () => invoiceItemMenu.StartAsync()),
         new("Tiquetes", () => ticketMenu.StartAsync()),
-        new("Check-ins", () => checkinMenu.StartAsync())
+        new("Check-ins", () => checkinMenu.StartAsync()),
+        new("Equipaje y recargos", () => baggageMenu.StartAsync())
     }, "Volver");
 
     var adminPeopleMenu = new RoleMenu("ADMIN - PERSONAS Y ORGANIZACION", new List<RoleMenuOption>
@@ -359,20 +362,9 @@ try
         new("Check-ins", () => checkinMenu.StartAsync()),
         new("Pagos", () => paymentMenu.StartAsync()),
         new("Tiquetes", () => ticketMenu.StartAsync()),
+        new("Equipaje y recargos", () => baggageMenu.StartAsync()),
         new("Sesiones", () => sessionMenu.StartAsync())
     });
-
-    var customerSecondaryMenu = new RoleMenu("CLIENTE - MENU SECUNDARIO", new List<RoleMenuOption>
-    {
-        new("Vuelos", () => flightMenu.StartAsync()),
-        new("Reservas (modulo completo)", () => reservationMenu.StartAsync()),
-        new("Reservas por vuelo", () => reservationFlightMenu.StartAsync()),
-        new("Pasajeros por reserva", () => reservationPassengerMenu.StartAsync()),
-        new("Tiquetes (modulo completo)", () => ticketMenu.StartAsync()),
-        new("Pagos (modulo completo)", () => paymentMenu.StartAsync()),
-        new("Check-ins (modulo completo)", () => checkinMenu.StartAsync()),
-        new("Clientes (modulo completo)", () => customerMenu.StartAsync())
-    }, "Volver");
 
     var customerProfileMenu = new RoleMenu("CLIENTE - PERFIL BASICO", new List<RoleMenuOption>
     {
@@ -453,6 +445,25 @@ try
             reservationRepository,
             reservationValidator);
 
+        var customerBaggageMenu = BaggageModule.BuildCustomer(
+            context,
+            customer.Id.Value,
+            getReservationsByCustomerId,
+            getTicketsByReservationCode);
+
+        var customerSecondaryMenuForUser = new RoleMenu("CLIENTE - MENU SECUNDARIO", new List<RoleMenuOption>
+        {
+            new("Vuelos", () => flightMenu.StartAsync()),
+            new("Reservas (modulo completo)", () => reservationMenu.StartAsync()),
+            new("Reservas por vuelo", () => reservationFlightMenu.StartAsync()),
+            new("Pasajeros por reserva", () => reservationPassengerMenu.StartAsync()),
+            new("Tiquetes (modulo completo)", () => ticketMenu.StartAsync()),
+            new("Pagos (modulo completo)", () => paymentMenu.StartAsync()),
+            new("Check-ins (modulo completo)", () => checkinMenu.StartAsync()),
+            new("Mi equipaje y recargos", () => customerBaggageMenu.StartAsync()),
+            new("Clientes (modulo completo)", () => customerMenu.StartAsync())
+        }, "Volver");
+
         var customerSelfServiceMenu = new CustomerSelfServiceMenu(
             customer.Id.Value,
             personId,
@@ -471,7 +482,7 @@ try
             () => reservationMenu.StartAsync(),
             () => checkinMenu.StartAsync(),
             () => customerProfileMenu.StartAsync(),
-            () => customerSecondaryMenu.StartAsync());
+            () => customerSecondaryMenuForUser.StartAsync());
 
         await customerSelfServiceMenu.StartAsync();
     }

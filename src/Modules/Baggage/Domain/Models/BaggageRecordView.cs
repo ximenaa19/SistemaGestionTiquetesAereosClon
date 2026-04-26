@@ -1,0 +1,27 @@
+namespace GestionAerolineas.src.Modules.Baggage.Domain.Models;
+
+public sealed record BaggageRecordView(
+    int Id,
+    int ReservationId,
+    string? ReservationCode,
+    int? TicketId,
+    string? TicketCode,
+    int? FlightId,
+    string? FlightCode,
+    int? PassengerId,
+    string? PassengerName,
+    int CabinTypeId,
+    string? CabinTypeName,
+    string BaggageType,
+    int Quantity,
+    decimal WeightKg,
+    string? Description,
+    int AllowedQuantity,
+    decimal AllowedWeightPerBagKg,
+    decimal AllowedTotalWeightKg,
+    int ExcessQuantity,
+    decimal ExcessWeightKg,
+    decimal QuantitySurcharge,
+    decimal WeightSurcharge,
+    decimal TotalSurcharge,
+    DateTime RegisteredAt);

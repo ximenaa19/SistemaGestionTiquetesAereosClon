@@ -66,6 +66,7 @@ using GestionAerolineas.src.Modules.Payments.Infrastructure.Entity;
 using GestionAerolineas.src.Modules.Invoices.Infrastructure.Entity;
 using GestionAerolineas.src.Modules.InvoiceItems.Infrastructure.Entity;
 using GestionAerolineas.src.Modules.Tickets.Infrastructure.Entity;
+using GestionAerolineas.src.Modules.Baggage.Infrastructure.Entity;
 
 
 namespace GestionAerolineas.src.shared.Context;
@@ -130,6 +131,7 @@ public class AppDbContext : DbContext
     public DbSet<PaymentEntity> Payments { get; set; }
     public DbSet<InvoiceEntity> Invoices { get; set; }
     public DbSet<InvoiceItemEntity> InvoiceItems { get; set; }
+    public DbSet<BaggageRecordEntity> BaggageRecords { get; set; }
 
     public DbSet<RegionEntity> Regions { get; set; }
     public DbSet<CityEntity> Cities { get; set; }
