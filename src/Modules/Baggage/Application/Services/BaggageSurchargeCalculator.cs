@@ -2,34 +2,34 @@ using GestionAerolineas.src.Modules.Baggage.Domain.Models;
 using GestionAerolineas.src.Modules.Baggage.Domain.ValueObject;
 
 namespace GestionAerolineas.src.Modules.Baggage.Application.Services;
-
+// reglas y calculo de recargos
 public class BaggageSurchargeCalculator
 {
     public const string CarryOnType = "MANO";
-    public const string CheckedType = "BODEGA";
+    public const string CheckedType = "BODEGA"; // constantes para las clases/cabinas
 
     public BaggageSurchargeResult Calculate(
         string cabinTypeName,
         string baggageType,
         int quantity,
         decimal totalWeightKg)
-    {
+    { //validaciones basicas de entrada. si algun dato es invalido, lanza excepcion
         if (quantity <= 0)
             throw new ArgumentException("La cantidad de maletas debe ser mayor que cero.");
 
         if (totalWeightKg <= 0)
             throw new ArgumentException("El peso debe ser mayor que cero.");
 
-        var normalizedType = BaggageType.Create(baggageType).Value;
-        var policy = ResolvePolicy(cabinTypeName, normalizedType);
+        var normalizedType = BaggageType.Create(baggageType).Value; // normaliza el tipo de equipaje
+        var policy = ResolvePolicy(cabinTypeName, normalizedType); //escoge la politica seguy el tipo de equipaje
 
-        var excessQuantity = Math.Max(0, quantity - policy.AllowedQuantity);
-        var weightPerBag = decimal.Round(totalWeightKg / quantity, 2);
-        var excessByTotalWeight = Math.Max(0, totalWeightKg - policy.AllowedTotalWeightKg);
-        var excessByBagWeight = Math.Max(0, weightPerBag - policy.AllowedWeightPerBagKg) * quantity;
-        var excessWeight = decimal.Round(Math.Max(excessByTotalWeight, excessByBagWeight), 2);
-        var quantitySurcharge = decimal.Round(excessQuantity * policy.ExtraBagFee, 2);
-        var weightSurcharge = decimal.Round(excessWeight * policy.ExcessKgFee, 2);
+        var excessQuantity = Math.Max(0, quantity - policy.AllowedQuantity); // calcula exceso de cantidad
+        var weightPerBag = decimal.Round(totalWeightKg / quantity, 2); // calcula peso por maleta
+        var excessByTotalWeight = Math.Max(0, totalWeightKg - policy.AllowedTotalWeightKg); // calcula exceso por peso total
+        var excessByBagWeight = Math.Max(0, weightPerBag - policy.AllowedWeightPerBagKg) * quantity; // calcula exceso por peso de maleta
+        var excessWeight = decimal.Round(Math.Max(excessByTotalWeight, excessByBagWeight), 2); // calcula exceso total
+        var quantitySurcharge = decimal.Round(excessQuantity * policy.ExtraBagFee, 2); // calcula recargo por cantidad
+        var weightSurcharge = decimal.Round(excessWeight * policy.ExcessKgFee, 2); // calcula recargo por peso
 
         return new BaggageSurchargeResult(
             policy,
@@ -44,7 +44,7 @@ public class BaggageSurchargeCalculator
     {
         return BaggageType.Create(baggageType).Value;
     }
-
+// reglas de negocio por cabina
     private static BaggagePolicy ResolvePolicy(string cabinTypeName, string baggageType)
     {
         var cabinFamily = ResolveCabinFamily(cabinTypeName);
@@ -59,7 +59,7 @@ public class BaggageSurchargeCalculator
             _ => new BaggagePolicy("ECONOMICA", baggageType, 1, 23m, 23m, 100000m, 18000m)
         };
     }
-
+ // detecta la familia de cabina con nombre
     private static string ResolveCabinFamily(string cabinTypeName)
     {
         var name = (cabinTypeName ?? string.Empty).Trim().ToUpperInvariant();

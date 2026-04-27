@@ -3,8 +3,10 @@ using GestionAerolineas.src.Modules.Baggage.Domain.Models;
 
 namespace GestionAerolineas.src.Modules.Baggage.UI;
 
+// menu de consola para Admin/Staff: permite registrar, consultar y revisar recargos
 public class BaggageMenu
 {
+    // casos de uso que ejecutan la logica real del modulo
     private readonly RegisterBaggageUseCase _register;
     private readonly PreviewBaggageSurchargeUseCase _preview;
     private readonly GetBaggageByCustomerUseCase _getByCustomer;
@@ -22,6 +24,7 @@ public class BaggageMenu
         GetCabinTypesForBaggageUseCase getCabinTypes,
         GetBaggageRegistrationContextUseCase getRegistrationContext)
     {
+        // guarda todas las dependencias que el menu necesita para responder a cada opcion
         _register = register;
         _preview = preview;
         _getByCustomer = getByCustomer;
@@ -33,6 +36,7 @@ public class BaggageMenu
 
     public async Task StartAsync()
     {
+        // ciclo principal del menu; se repite hasta que el usuario elija volver
         while (true)
         {
             Console.Clear();
@@ -50,6 +54,7 @@ public class BaggageMenu
 
             try
             {
+                // enruta la opcion digitada al metodo correspondiente
                 switch (option)
                 {
                     case "1":
@@ -77,6 +82,7 @@ public class BaggageMenu
             }
             catch (Exception ex)
             {
+                // muestra errores de validacion o base de datos sin cerrar el programa
                 Console.WriteLine($"Error: {ex.GetBaseException().Message}");
                 Pause();
             }
@@ -86,16 +92,22 @@ public class BaggageMenu
     private async Task RegisterByTicketAsync()
     {
         Console.WriteLine("=== Registrar equipaje por tiquete ===");
+        // pide el id del tiquete que ya debe existir
         var ticketId = ReadInt("Id del tiquete: ");
+        // obtiene reserva, vuelo, pasajero y total actual asociados al tiquete
         var context = await _getRegistrationContext.ExecuteByTicketAsync(ticketId);
         PrintRegistrationContext(context);
+        // lee cabina, tipo, cantidad, peso y descripcion
         var input = await ReadBaggageInputAsync();
+        // calcula recargo antes de guardar para pedir confirmacion
         var preview = await _preview.ExecuteAsync(input.CabinTypeId, input.BaggageType, input.Quantity, input.TotalWeightKg);
 
         PrintCalculation(preview, input.Quantity, input.WeightPerBagKg, input.TotalWeightKg);
+        // si el usuario no confirma, no se guarda nada
         if (!Confirm("Confirmar registro y actualizar total de la reserva? (s/n): "))
             return;
 
+        // registra el equipaje y actualiza la reserva si hay recargo
         var result = await _register.ExecuteByTicketAsync(
             ticketId,
             input.CabinTypeId,
@@ -111,16 +123,22 @@ public class BaggageMenu
     private async Task RegisterByReservationAsync()
     {
         Console.WriteLine("=== Registrar equipaje por reserva ===");
+        // pide el id de la reserva donde se asociara el equipaje
         var reservationId = ReadInt("Id de la reserva: ");
+        // obtiene contexto de la reserva antes de registrar
         var context = await _getRegistrationContext.ExecuteByReservationAsync(reservationId);
         PrintRegistrationContext(context);
+        // captura los datos del equipaje
         var input = await ReadBaggageInputAsync();
+        // calcula y muestra el recargo antes de persistir
         var preview = await _preview.ExecuteAsync(input.CabinTypeId, input.BaggageType, input.Quantity, input.TotalWeightKg);
 
         PrintCalculation(preview, input.Quantity, input.WeightPerBagKg, input.TotalWeightKg);
+        // confirmacion para evitar guardar por error
         if (!Confirm("Confirmar registro y actualizar total de la reserva? (s/n): "))
             return;
 
+        // guarda el registro usando el flujo por reserva
         var result = await _register.ExecuteByReservationAsync(
             reservationId,
             input.CabinTypeId,
@@ -135,6 +153,7 @@ public class BaggageMenu
 
     private async Task<BaggageInput> ReadBaggageInputAsync()
     {
+        // muestra las cabinas existentes para que el usuario elija una politica
         await PrintCabinTypesAsync();
         var cabinTypeId = ReadInt("Id de clase/cabina: ");
 
@@ -144,8 +163,10 @@ public class BaggageMenu
         Console.Write("Tipo: ");
         var baggageType = Console.ReadLine() ?? string.Empty;
 
+        // captura cantidad y peso por maleta
         var quantity = ReadInt("Cantidad de maletas: ");
         var weightPerBagKg = ReadDecimal("Peso por maleta en kg: ");
+        // calcula automaticamente el peso total requerido por el caso de uso
         var totalWeightKg = decimal.Round(quantity * weightPerBagKg, 2);
         Console.Write("Observaciones/descripcion (opcional): ");
         var description = Console.ReadLine();
@@ -155,6 +176,7 @@ public class BaggageMenu
 
     private async Task PrintCabinTypesAsync()
     {
+        // obtiene cabinas desde el caso de uso para evitar valores quemados en la UI
         var cabinTypes = await _getCabinTypes.ExecuteAsync();
         Console.WriteLine("Clases/cabinas disponibles:");
 
@@ -173,6 +195,7 @@ public class BaggageMenu
     private async Task PrintByCustomerAsync()
     {
         Console.WriteLine("=== Equipaje por cliente ===");
+        // Admin/Staff si puede ingresar cualquier cliente para consultar
         var customerId = ReadInt("Id del cliente: ");
         var records = await _getByCustomer.ExecuteAsync(customerId);
         PrintRecords(records);
@@ -182,6 +205,7 @@ public class BaggageMenu
     private async Task PrintByFlightAsync()
     {
         Console.WriteLine("=== Equipaje por vuelo ===");
+        // consulta todos los registros asociados a un vuelo especifico
         var flightId = ReadInt("Id del vuelo: ");
         var records = await _getByFlight.ExecuteAsync(flightId);
         PrintRecords(records);
@@ -191,6 +215,7 @@ public class BaggageMenu
     private async Task PrintSurchargesAsync()
     {
         Console.WriteLine("=== Recargos aplicados ===");
+        // lista solo equipajes cuyo recargo_total sea mayor que cero
         var records = await _getSurcharges.ExecuteAsync();
         PrintRecords(records);
         Pause();
@@ -198,6 +223,7 @@ public class BaggageMenu
 
     private static void PrintRecords(IReadOnlyList<BaggageRecordView> records)
     {
+        // si la consulta viene vacia, se informa al usuario
         if (records.Count == 0)
         {
             Console.WriteLine("No hay registros para mostrar.");
@@ -206,6 +232,7 @@ public class BaggageMenu
 
         foreach (var item in records)
         {
+            // imprime una linea resumida con reserva, tiquete, vuelo, pasajero y recargo
             Console.WriteLine(
                 $"{item.Id} - reserva={item.ReservationCode ?? item.ReservationId.ToString()} - " +
                 $"ticket={item.TicketCode ?? item.TicketId?.ToString() ?? "N/A"} - " +
@@ -219,6 +246,7 @@ public class BaggageMenu
 
     private static void PrintCalculation(BaggageSurchargeResult result, int quantity, decimal weightPerBagKg, decimal totalWeightKg)
     {
+        // muestra el detalle del calculo para que el usuario revise antes de confirmar
         Console.WriteLine();
         Console.WriteLine("Detalle del calculo:");
         Console.WriteLine($"Clase aplicada: {result.Policy.CabinFamily}");
@@ -239,6 +267,7 @@ public class BaggageMenu
 
     private static void PrintRegistrationResult(RegisterBaggageResult result)
     {
+        // muestra el efecto final del registro sobre la reserva
         Console.WriteLine();
         Console.WriteLine("Equipaje registrado correctamente.");
         Console.WriteLine($"Reserva: {result.Context.ReservationCode ?? result.Context.ReservationId.ToString()}");
@@ -252,6 +281,7 @@ public class BaggageMenu
 
     private static void PrintRegistrationContext(BaggageRegistrationContext context)
     {
+        // muestra datos relacionados encontrados antes de capturar equipaje
         Console.WriteLine();
         Console.WriteLine("Datos encontrados:");
         Console.WriteLine($"Reserva: {context.ReservationCode ?? context.ReservationId.ToString()}");
@@ -264,6 +294,7 @@ public class BaggageMenu
 
     private static int ReadInt(string prompt)
     {
+        // lee enteros positivos de forma segura
         while (true)
         {
             Console.Write(prompt);
@@ -276,6 +307,7 @@ public class BaggageMenu
 
     private static decimal ReadDecimal(string prompt)
     {
+        // lee decimales positivos de forma segura
         while (true)
         {
             Console.Write(prompt);
@@ -288,6 +320,7 @@ public class BaggageMenu
 
     private static bool Confirm(string prompt)
     {
+        // acepta respuestas afirmativas en espanol o ingles
         Console.Write(prompt);
         var value = (Console.ReadLine() ?? string.Empty).Trim().ToUpperInvariant();
         return value is "S" or "SI" or "Y" or "YES";
@@ -295,11 +328,13 @@ public class BaggageMenu
 
     private static void Pause()
     {
+        // pausa para que el usuario pueda leer el resultado antes de limpiar pantalla
         Console.WriteLine();
         Console.WriteLine("Presiona una tecla para continuar...");
         Console.ReadKey();
     }
 
+    // datos capturados desde consola para enviar al caso de uso
     private sealed record BaggageInput(
         int CabinTypeId,
         string BaggageType,

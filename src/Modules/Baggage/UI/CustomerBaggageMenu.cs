@@ -7,14 +7,18 @@ using GestionAerolineas.src.Modules.Tickets.Domain.Aggregate;
 
 namespace GestionAerolineas.src.Modules.Baggage.UI;
 
+// menu para cliente autenticado: solo permite operar sobre sus propias reservas y tiquetes
 public class CustomerBaggageMenu
 {
+    // cliente que inicio sesion; por eso no se pide customer_id por consola
     private readonly int _customerId;
+    // casos de uso del modulo Baggage
     private readonly RegisterBaggageUseCase _register;
     private readonly PreviewBaggageSurchargeUseCase _preview;
     private readonly GetBaggageByCustomerUseCase _getByCustomer;
     private readonly GetCabinTypesForBaggageUseCase _getCabinTypes;
     private readonly GetBaggageRegistrationContextUseCase _getRegistrationContext;
+    // casos de uso externos para listar reservas y tiquetes propios del cliente
     private readonly GetReservationsByCustomerIdUseCase _getReservationsByCustomerId;
     private readonly GetTicketsByReservationCodeUseCase _getTicketsByReservationCode;
 
@@ -28,6 +32,7 @@ public class CustomerBaggageMenu
         GetReservationsByCustomerIdUseCase getReservationsByCustomerId,
         GetTicketsByReservationCodeUseCase getTicketsByReservationCode)
     {
+        // guarda el cliente autenticado y las dependencias necesarias del menu
         _customerId = customerId;
         _register = register;
         _preview = preview;
@@ -40,6 +45,7 @@ public class CustomerBaggageMenu
 
     public async Task StartAsync()
     {
+        // ciclo principal del menu de autoservicio del cliente
         while (true)
         {
             Console.Clear();
@@ -56,6 +62,7 @@ public class CustomerBaggageMenu
 
             try
             {
+                // ejecuta la opcion seleccionada por el cliente
                 switch (option)
                 {
                     case "1":
@@ -80,6 +87,7 @@ public class CustomerBaggageMenu
             }
             catch (Exception ex)
             {
+                // muestra mensajes de validacion sin cerrar la aplicacion
                 Console.WriteLine($"Error: {ex.GetBaseException().Message}");
                 Pause();
             }
@@ -89,6 +97,7 @@ public class CustomerBaggageMenu
     private async Task PrintMyBaggageAsync()
     {
         Console.WriteLine("=== Mi equipaje registrado ===");
+        // consulta usando el customerId de la sesion actual
         var records = await _getByCustomer.ExecuteAsync(_customerId);
         PrintRecords(records);
         Pause();
@@ -97,6 +106,7 @@ public class CustomerBaggageMenu
     private async Task PrintMySurchargesAsync()
     {
         Console.WriteLine("=== Mis recargos aplicados ===");
+        // obtiene todos los registros del cliente y filtra en memoria los que tienen recargo
         var records = (await _getByCustomer.ExecuteAsync(_customerId))
             .Where(x => x.TotalSurcharge > 0)
             .ToList();
@@ -108,6 +118,7 @@ public class CustomerBaggageMenu
     private async Task RegisterByOwnReservationAsync()
     {
         Console.WriteLine("=== Registrar equipaje por reserva ===");
+        // lista solo reservas que pertenecen al cliente autenticado
         var reservations = await GetOwnReservationsAsync();
         if (reservations.Count == 0)
         {
@@ -118,18 +129,23 @@ public class CustomerBaggageMenu
 
         PrintReservations(reservations);
         var reservationId = ReadInt("\nIngresa reservation_id: ");
+        // seguridad funcional: bloquea reservas que no pertenezcan al cliente
         if (!reservations.Any(x => x.Id.Value == reservationId))
             throw new InvalidOperationException("Esa reserva no pertenece a tu cuenta.");
 
+        // obtiene contexto y sigue el flujo normal de registro
         var context = await _getRegistrationContext.ExecuteByReservationAsync(reservationId);
         PrintRegistrationContext(context);
         var input = await ReadBaggageInputAsync();
+        // previsualiza el recargo antes de guardar
         var preview = await _preview.ExecuteAsync(input.CabinTypeId, input.BaggageType, input.Quantity, input.TotalWeightKg);
 
         PrintCalculation(preview, input.Quantity, input.WeightPerBagKg, input.TotalWeightKg);
+        // si el cliente no confirma, no se persiste el equipaje
         if (!Confirm("Confirmar registro y actualizar total de la reserva? (s/n): "))
             return;
 
+        // registra sobre una reserva verificada como propia
         var result = await _register.ExecuteByReservationAsync(
             reservationId,
             input.CabinTypeId,
@@ -145,6 +161,7 @@ public class CustomerBaggageMenu
     private async Task RegisterByOwnTicketAsync()
     {
         Console.WriteLine("=== Registrar equipaje por tiquete ===");
+        // lista solo tiquetes asociados a reservas del cliente autenticado
         var tickets = await GetOwnTicketsAsync();
         if (tickets.Count == 0)
         {
@@ -155,18 +172,23 @@ public class CustomerBaggageMenu
 
         PrintTickets(tickets);
         var ticketId = ReadInt("\nIngresa ticket_id: ");
+        // seguridad funcional: evita usar tiquetes de otro cliente
         if (!tickets.Any(x => x.Id.Value == ticketId))
             throw new InvalidOperationException("Ese tiquete no pertenece a tu cuenta.");
 
+        // obtiene contexto por tiquete y continua con el mismo flujo de calculo
         var context = await _getRegistrationContext.ExecuteByTicketAsync(ticketId);
         PrintRegistrationContext(context);
         var input = await ReadBaggageInputAsync();
+        // muestra el calculo antes de guardar
         var preview = await _preview.ExecuteAsync(input.CabinTypeId, input.BaggageType, input.Quantity, input.TotalWeightKg);
 
         PrintCalculation(preview, input.Quantity, input.WeightPerBagKg, input.TotalWeightKg);
+        // confirmacion final antes de registrar y actualizar total
         if (!Confirm("Confirmar registro y actualizar total de la reserva? (s/n): "))
             return;
 
+        // registra sobre un tiquete verificado como propio
         var result = await _register.ExecuteByTicketAsync(
             ticketId,
             input.CabinTypeId,
@@ -181,6 +203,7 @@ public class CustomerBaggageMenu
 
     private async Task<List<Reservation>> GetOwnReservationsAsync()
     {
+        // obtiene reservas del cliente y las ordena de mas recientes a mas antiguas
         return (await _getReservationsByCustomerId.ExecuteAsync(_customerId))
             .OrderByDescending(x => x.ReservedAt.Value)
             .ToList();
@@ -188,14 +211,17 @@ public class CustomerBaggageMenu
 
     private async Task<List<Ticket>> GetOwnTicketsAsync()
     {
+        // parte de las reservas propias para no consultar tiquetes ajenos
         var reservations = (await GetOwnReservationsAsync())
             .Where(x => !string.IsNullOrWhiteSpace(x.Code?.Value))
             .ToList();
 
+        // acumula los tiquetes de cada reserva propia
         var tickets = new List<Ticket>();
         foreach (var reservation in reservations)
             tickets.AddRange(await _getTicketsByReservationCode.ExecuteAsync(reservation.Code!.Value));
 
+        // ordena los tiquetes por fecha de emision
         return tickets
             .OrderByDescending(x => x.IssuedAt.Value)
             .ToList();
@@ -203,6 +229,7 @@ public class CustomerBaggageMenu
 
     private async Task<BaggageInput> ReadBaggageInputAsync()
     {
+        // muestra cabinas disponibles antes de pedir el id
         await PrintCabinTypesAsync();
         var cabinTypeId = ReadInt("Id de clase/cabina: ");
 
@@ -212,8 +239,10 @@ public class CustomerBaggageMenu
         Console.Write("Tipo: ");
         var baggageType = Console.ReadLine() ?? string.Empty;
 
+        // lee cantidad y peso por maleta
         var quantity = ReadInt("Cantidad de maletas: ");
         var weightPerBagKg = ReadDecimal("Peso por maleta en kg: ");
+        // calcula peso total automaticamente
         var totalWeightKg = decimal.Round(quantity * weightPerBagKg, 2);
         Console.Write("Observaciones/descripcion (opcional): ");
         var description = Console.ReadLine();
@@ -223,6 +252,7 @@ public class CustomerBaggageMenu
 
     private async Task PrintCabinTypesAsync()
     {
+        // consulta cabinas reales de la base de datos
         var cabinTypes = await _getCabinTypes.ExecuteAsync();
         Console.WriteLine("Clases/cabinas disponibles:");
 
@@ -240,6 +270,7 @@ public class CustomerBaggageMenu
 
     private static void PrintReservations(IReadOnlyList<Reservation> reservations)
     {
+        // imprime reservas propias con id para que el cliente seleccione una
         Console.WriteLine("Tus reservas:");
         foreach (var item in reservations)
             Console.WriteLine($"[{item.Id.Value}] PNR={item.Code?.Value ?? "NULL"} | Total={item.TotalAmount.Value:0.00} | Fecha={item.ReservedAt.Value:yyyy-MM-dd HH:mm}");
@@ -247,6 +278,7 @@ public class CustomerBaggageMenu
 
     private static void PrintTickets(IReadOnlyList<Ticket> tickets)
     {
+        // imprime tiquetes propios con id para que el cliente seleccione uno
         Console.WriteLine("Tus tiquetes:");
         foreach (var item in tickets)
             Console.WriteLine($"[{item.Id.Value}] Code={item.Code.Value} | Emision={item.IssuedAt.Value:yyyy-MM-dd HH:mm}");
@@ -254,6 +286,7 @@ public class CustomerBaggageMenu
 
     private static void PrintRecords(IReadOnlyList<BaggageRecordView> records)
     {
+        // muestra mensaje amigable si el cliente aun no tiene equipaje registrado
         if (records.Count == 0)
         {
             Console.WriteLine("No hay registros para mostrar.");
@@ -262,6 +295,7 @@ public class CustomerBaggageMenu
 
         foreach (var item in records)
         {
+            // imprime una linea resumida para cada registro del cliente
             Console.WriteLine(
                 $"{item.Id} - reserva={item.ReservationCode ?? item.ReservationId.ToString()} - " +
                 $"ticket={item.TicketCode ?? item.TicketId?.ToString() ?? "N/A"} - " +
@@ -274,6 +308,7 @@ public class CustomerBaggageMenu
 
     private static void PrintCalculation(BaggageSurchargeResult result, int quantity, decimal weightPerBagKg, decimal totalWeightKg)
     {
+        // muestra la politica aplicada y el detalle del recargo antes de confirmar
         Console.WriteLine();
         Console.WriteLine("Detalle del calculo:");
         Console.WriteLine($"Clase aplicada: {result.Policy.CabinFamily}");
@@ -294,6 +329,7 @@ public class CustomerBaggageMenu
 
     private static void PrintRegistrationResult(RegisterBaggageResult result)
     {
+        // confirma el registro y muestra como cambio el total de la reserva
         Console.WriteLine();
         Console.WriteLine("Equipaje registrado correctamente.");
         Console.WriteLine($"Reserva: {result.Context.ReservationCode ?? result.Context.ReservationId.ToString()}");
@@ -307,6 +343,7 @@ public class CustomerBaggageMenu
 
     private static void PrintRegistrationContext(BaggageRegistrationContext context)
     {
+        // confirma visualmente la reserva, tiquete, vuelo y pasajero relacionados
         Console.WriteLine();
         Console.WriteLine("Datos encontrados:");
         Console.WriteLine($"Reserva: {context.ReservationCode ?? context.ReservationId.ToString()}");
@@ -319,6 +356,7 @@ public class CustomerBaggageMenu
 
     private static int ReadInt(string prompt)
     {
+        // fuerza la lectura de enteros positivos
         while (true)
         {
             Console.Write(prompt);
@@ -331,6 +369,7 @@ public class CustomerBaggageMenu
 
     private static decimal ReadDecimal(string prompt)
     {
+        // fuerza la lectura de decimales positivos
         while (true)
         {
             Console.Write(prompt);
@@ -343,6 +382,7 @@ public class CustomerBaggageMenu
 
     private static bool Confirm(string prompt)
     {
+        // interpreta respuestas afirmativas para confirmar el registro
         Console.Write(prompt);
         var value = (Console.ReadLine() ?? string.Empty).Trim().ToUpperInvariant();
         return value is "S" or "SI" or "Y" or "YES";
@@ -350,11 +390,13 @@ public class CustomerBaggageMenu
 
     private static void Pause()
     {
+        // detiene la pantalla para que el usuario pueda leer mensajes
         Console.WriteLine();
         Console.WriteLine("Presiona una tecla para continuar...");
         Console.ReadKey();
     }
 
+    // estructura interna con los datos capturados del equipaje
     private sealed record BaggageInput(
         int CabinTypeId,
         string BaggageType,

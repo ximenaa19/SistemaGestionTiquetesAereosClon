@@ -1,5 +1,5 @@
 namespace GestionAerolineas.src.Modules.Baggage.Domain.Models;
-
+// modelo de consulta de registros de equipaje. sirve para listar los equipajes y recargos
 public sealed record BaggageRecordView(
     int Id,
     int ReservationId,

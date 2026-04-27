@@ -16,17 +16,18 @@ public class BaggageValidator : IBaggageValidator
     public async Task ValidateCabinTypeExistsAsync(int cabinTypeId)
     {
         if (cabinTypeId <= 0)
-            throw new ArgumentException("La clase/cabina es obligatoria.");
+            throw new ArgumentException("La clase/cabina es obligatoria."); // valida forma 
 
         var exists = await _repository.CabinTypeExistsAsync(cabinTypeId);
         if (!exists)
-            throw new ArgumentException("La clase/cabina seleccionada no existe.");
+            throw new ArgumentException("La clase/cabina seleccionada no existe."); // valida existencia en la base de datos
     }
 
-    public void ValidateRegistrationInput(string baggageType, int quantity, decimal totalWeightKg)
+    public void ValidateRegistrationInput(string baggageType, int quantity, decimal totalWeightKg) // usa value object. si algun dato es invalido, lanza excepcion
     {
         BaggageType.Create(baggageType);
         BaggageQuantity.Create(quantity);
         BaggageWeightKg.Create(totalWeightKg);
     }
 }
+ 

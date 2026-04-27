@@ -13,6 +13,7 @@ Aplicación de consola en `.NET` para gestionar operación aérea, comercial y a
 - [Migraciones y base de datos](#migraciones-y-base-de-datos)
 - [Ejecución](#ejecución)
 - [Manual de usuario (consola)](#manual-de-usuario-consola)
+- [Modulo Baggage: equipaje y recargos](#modulo-baggage-equipaje-y-recargos)
 - [Guia exhaustiva del menu cliente](#guia-exhaustiva-del-menu-cliente)
 - [Reportes LINQ](#reportes-linq)
 - [Guía técnica para desarrollo](#guía-técnica-para-desarrollo)
@@ -44,6 +45,7 @@ Permite operar datos maestros (catálogos), entidades transaccionales y menús p
 - Vuelos, asignaciones, asientos, tarifas, reservas, pasajeros de reserva.
 - Pagos, tiquetes, facturas e ítems de factura.
 - Check-ins y estados de proceso.
+- Equipaje y recargos por reserva o tiquete, con calculo automatico de exceso por cantidad/peso y actualizacion del total de la reserva.
 
 ### Catálogos y datos maestros
 - Catálogos idempotentes (roles, permisos, estados, tipos).
@@ -206,11 +208,130 @@ dotnet run --project .\GestionAerolineas.csproj
   - Mis reservas / detalle
   - Mis tiquetes
   - Mis pagos
+  - Mi equipaje y recargos
   - Check-in
   - Perfil básico (correo/teléfono)
 
 ### 5) Seeders desde el sistema
 - En `Admin -> Sistema` puedes ejecutar seed de maestros y catálogos.
+
+## Modulo Baggage: equipaje y recargos
+
+El modulo `Baggage` fue agregado para cubrir la gestion de equipaje y cobros adicionales dentro del flujo comercial de reservas y tiquetes. Permite registrar equipaje de mano o equipaje en bodega, calcular recargos por exceso de cantidad o peso, guardar el detalle en base de datos y actualizar automaticamente el valor total de la reserva cuando aplica un cobro.
+
+### Ubicacion e implementacion
+
+El modulo se encuentra en:
+
+```text
+src/Modules/Baggage
+```
+
+Sigue la misma organizacion modular del proyecto:
+
+- `Domain`: contiene el agregado `BaggageRecord`, value objects, modelos auxiliares y el contrato `IBaggageRecordRepository`.
+- `Application`: contiene casos de uso, validadores y el servicio `BaggageSurchargeCalculator`, donde estan las reglas de negocio de recargos.
+- `Infrastructure`: contiene la entidad EF `BaggageRecordEntity`, la configuracion de la tabla `baggage_records` y el repositorio con consultas a MySQL.
+- `UI`: contiene `BaggageMenu` para Admin/Staff y `CustomerBaggageMenu` para cliente autenticado.
+- `BaggageModule.cs`: arma dependencias del modulo y construye los menus.
+
+Tambien se integro en:
+
+- `AppDbContext.cs`, con `DbSet<BaggageRecordEntity> BaggageRecords`.
+- `Program.cs`, agregando opciones de menu para Admin, Staff y Cliente.
+- Migracion `BaggageMigration`, que crea la tabla `baggage_records`.
+
+### Que permite hacer
+
+- Registrar equipaje por `reservation_id`.
+- Registrar equipaje por `ticket_id`.
+- Seleccionar clase/cabina para aplicar politica de equipaje.
+- Registrar tipo de equipaje: `MANO` o `BODEGA`.
+- Ingresar cantidad de maletas y peso por maleta.
+- Calcular automaticamente el peso total.
+- Previsualizar excesos y recargos antes de guardar.
+- Confirmar o cancelar el registro.
+- Guardar el registro en `baggage_records`.
+- Sumar el recargo al total de la reserva si `recargo_total > 0`.
+- Consultar equipaje por cliente.
+- Consultar equipaje por vuelo.
+- Ver registros con recargos aplicados.
+- Permitir que el cliente vea y registre solo sobre sus propias reservas/tiquetes.
+
+### Reglas importantes
+
+El calculo principal esta en:
+
+```text
+src/Modules/Baggage/Application/Services/BaggageSurchargeCalculator.cs
+```
+
+Reglas generales:
+
+- La cantidad debe ser mayor que cero.
+- El peso debe ser mayor que cero.
+- La cabina debe existir en `CabinTypes`.
+- El tipo de equipaje se normaliza a `MANO` o `BODEGA`.
+- El exceso por cantidad se calcula como `cantidad registrada - cantidad permitida`.
+- El exceso por peso compara peso total permitido y peso maximo por maleta.
+- El recargo total es `recargo por cantidad + recargo por peso`.
+
+Las politicas cambian segun familia de cabina:
+
+- `PRIMERA`
+- `EJECUTIVA`
+- `ECONOMICA`
+
+### Modo de uso en consola
+
+Para Admin/Staff:
+
+1. Ejecutar el proyecto con `dotnet run --project .\GestionAerolineas.csproj`.
+2. Iniciar sesion con rol Admin o Staff.
+3. Entrar a `Equipaje y recargos`.
+4. Elegir:
+   - Registrar por tiquete.
+   - Registrar por reserva.
+   - Consultar por cliente.
+   - Consultar por vuelo.
+   - Ver recargos aplicados.
+5. Al registrar, revisar el detalle del calculo y confirmar con `s`.
+
+Para Cliente:
+
+1. Iniciar sesion con usuario de rol Cliente.
+2. Entrar a `Mi equipaje y recargos`.
+3. Elegir:
+   - Ver mi equipaje registrado.
+   - Registrar por una de mis reservas.
+   - Registrar por uno de mis tiquetes.
+   - Ver mis recargos aplicados.
+4. El sistema lista solo reservas o tiquetes propios y bloquea ids que no pertenezcan al cliente.
+
+### Datos importantes para probar
+
+Antes de registrar equipaje debe existir al menos:
+
+- Una reserva en `reservations`.
+- Una cabina en `CabinTypes`.
+- Si se registra por tiquete, un tiquete relacionado con una reserva/pasajero.
+- Para cliente, el usuario autenticado debe estar enlazado a `people` y `customers`.
+
+Si se usa una base de datos nueva:
+
+```bash
+dotnet ef database update --context AppDbContext --project .\GestionAerolineas.csproj --startup-project .\GestionAerolineas.csproj
+```
+
+Despues ejecutar:
+
+```bash
+dotnet run --project .\GestionAerolineas.csproj
+```
+
+### Explicacion corta para sustentacion
+
+`Baggage` es un modulo comercial que registra equipaje asociado a reservas o tiquetes. Usa arquitectura por capas: el dominio representa el registro de equipaje, la aplicacion valida y calcula recargos, infraestructura guarda en MySQL con EF Core, y la UI expone menus de consola. Su regla principal es calcular excesos por cantidad y peso segun la cabina seleccionada; si existe recargo, se guarda el detalle y se suma al total de la reserva.
 
 ## Guia del menu cliente
 
@@ -366,7 +487,17 @@ Esta guia describe TODO el flujo que puede seguir un usuario con rol `Cliente`.
   - Cambiar estado de check-in.
   - Eliminar check-in (si permitido).
 
-##### 2.10.8 Clientes (modulo completo)
+##### 2.10.8 Mi equipaje y recargos
+- Gestiona equipaje y cobros adicionales del cliente autenticado.
+- Acciones comunes:
+  - Ver equipaje registrado.
+  - Registrar equipaje por una reserva propia.
+  - Registrar equipaje por un tiquete propio.
+  - Ver solo mis recargos aplicados.
+- Importante: el cliente no digita `customer_id`; el sistema usa el cliente de la sesion.
+- Seguridad: si el cliente intenta usar una reserva o tiquete ajeno, la operacion se bloquea.
+
+##### 2.10.9 Clientes (modulo completo)
 - Modulo administrativo de clientes.
 - Desde perfil cliente normalmente se usa para consulta; evita editar registros de terceros.
 - Si haces pruebas, usa solo tu `customer_id` para no mezclar datos.
@@ -380,8 +511,9 @@ Esta guia describe TODO el flujo que puede seguir un usuario con rol `Cliente`.
 6. Verificar en `Mis reservas` y `Detalle de reserva`.
 7. Registrar pago y verificar en `Mis pagos`.
 8. Revisar/emitir tiquete y verificar en `Mis tiquetes`.
-9. Hacer check-in cuando aplique.
-10. Si corresponde, cancelar reserva y validar cambio de estado.
+9. Registrar equipaje en `Mi equipaje y recargos` si corresponde.
+10. Hacer check-in cuando aplique.
+11. Si corresponde, cancelar reserva y validar cambio de estado.
 
 ### 3) Atajos y navegacion
 - En menus con flechas:
@@ -399,8 +531,9 @@ Esta guia describe TODO el flujo que puede seguir un usuario con rol `Cliente`.
 4. Verla en `Mis reservas`.
 5. Consultar `Detalle de reserva`.
 6. Revisar `Mis tiquetes` y `Mis pagos`.
-7. Probar `Cancelar reserva`.
-8. Actualizar correo/telefono en `Perfil basico`.
+7. Registrar equipaje y validar recargo si aplica.
+8. Probar `Cancelar reserva`.
+9. Actualizar correo/telefono en `Perfil basico`.
 
 ## Reportes LINQ
 
@@ -465,6 +598,7 @@ Usa esta lista como validación final antes de presentar:
 - [ ] Se ejecuta seed de catálogos/maestros desde menú de sistema.
 - [ ] Se demuestra login por rol y cambio de menú por rol.
 - [ ] Se ejecutan reportes LINQ desde menú Admin.
+- [ ] Se demuestra registro de equipaje y recargo en el modulo `Baggage`.
 - [ ] Se muestran consultas reales en BD (Workbench o SQL CLI).
 
 ### 2) Script de demo (10–15 min)
@@ -501,6 +635,13 @@ dotnet run --project .\GestionAerolineas.csproj
    - Tiquetes por rango de fechas
 3. Mostrar resultados por consola y confirmar con SQL en Workbench.
 
+#### Bloque E - Equipaje y recargos (2-3 min)
+1. Ir a `Equipaje y recargos` como Admin/Staff o a `Mi equipaje y recargos` como Cliente.
+2. Registrar equipaje por reserva o tiquete.
+3. Mostrar el calculo de exceso por cantidad/peso.
+4. Confirmar el registro y mostrar el nuevo total de la reserva.
+5. Consultar `Ver recargos aplicados` o `Mis recargos aplicados`.
+
 ### 3) Script SQL de verificación rápida
 
 > Ajusta nombres si tu esquema usa columnas en español (por ejemplo `fecha_emision` en vez de `issued_at`).
@@ -529,6 +670,12 @@ SELECT COUNT(*) AS tickets_en_rango
 FROM tickets
 WHERE fecha_emision >= '2020-01-01'
   AND fecha_emision <= '2026-12-12 23:59:59';
+
+-- Ultimos registros de equipaje y recargos
+SELECT id, reserva_id, tiquete_id, tipo_equipaje, cantidad, peso_kg, recargo_total, fecha_registro
+FROM baggage_records
+ORDER BY id DESC
+LIMIT 20;
 ```
 
 ### 4) Evidencias recomendadas para entregar

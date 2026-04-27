@@ -6,7 +6,7 @@ public class BaggageRecord
 {
     public BaggageId Id { get; private set; }
     public BaggageReservationId ReservationId { get; private set; }
-    public int? TicketId { get; private set; }
+    public int? TicketId { get; private set; } 
     public int? ReservationPassengerId { get; private set; }
     public int? FlightId { get; private set; }
     public int? PassengerId { get; private set; }
@@ -15,16 +15,19 @@ public class BaggageRecord
     public BaggageQuantity Quantity { get; private set; }
     public BaggageWeightKg WeightKg { get; private set; }
     public string? Description { get; private set; }
-    public int AllowedQuantity { get; private set; }
-    public decimal AllowedWeightPerBagKg { get; private set; }
-    public decimal AllowedTotalWeightKg { get; private set; }
-    public int ExcessQuantity { get; private set; }
-    public decimal ExcessWeightKg { get; private set; }
-    public BaggageSurchargeAmount QuantitySurcharge { get; private set; }
-    public BaggageSurchargeAmount WeightSurcharge { get; private set; }
-    public BaggageSurchargeAmount TotalSurcharge { get; private set; }
-    public BaggageRegisteredAt RegisteredAt { get; private set; }
 
+    // politica aplicada en el registro
+    public int AllowedQuantity { get; private set; } // cantidad permitida
+    public decimal AllowedWeightPerBagKg { get; private set; }// peso permitido por maleta
+    public decimal AllowedTotalWeightKg { get; private set; } // peso total permitido
+    public int ExcessQuantity { get; private set; } // cuantas maletas exceden la cantidad permitida
+    public decimal ExcessWeightKg { get; private set; } // cuantos kg exceden el peso permitido (total)
+    public BaggageSurchargeAmount QuantitySurcharge { get; private set; } // recargo por cantidad
+    public BaggageSurchargeAmount WeightSurcharge { get; private set; } // recargo por peso
+    public BaggageSurchargeAmount TotalSurcharge { get; private set; } // recargo total
+    public BaggageRegisteredAt RegisteredAt { get; private set; } // fecha de registro
+
+    // constructor privado para forzar el uso de los métodos de creación
     private BaggageRecord(
         BaggageId id,
         BaggageReservationId reservationId,
@@ -69,6 +72,7 @@ public class BaggageRecord
         RegisteredAt = registeredAt;
     }
 
+    // crea un registro nuevo con validación de negocio
     public static BaggageRecord Create(
         int id,
         int reservationId,
@@ -92,7 +96,7 @@ public class BaggageRecord
         DateTime registeredAt)
     {
         return new BaggageRecord(
-            id <= 0 ? BaggageId.CreateEmpty() : BaggageId.Create(id),
+            id <= 0 ? BaggageId.CreateEmpty() : BaggageId.Create(id), // crea un id si no se le pasa uno
             BaggageReservationId.Create(reservationId),
             ticketId,
             reservationPassengerId,
@@ -104,16 +108,16 @@ public class BaggageRecord
             BaggageWeightKg.Create(weightKg),
             string.IsNullOrWhiteSpace(description) ? null : description.Trim(),
             allowedQuantity,
-            decimal.Round(allowedWeightPerBagKg, 2),
-            decimal.Round(allowedTotalWeightKg, 2),
-            Math.Max(0, excessQuantity),
+            decimal.Round(allowedWeightPerBagKg, 2), // redondea los valores de los decimales
+            decimal.Round(allowedTotalWeightKg, 2), // para evitar errores de redondeo
+            Math.Max(0, excessQuantity), // si el exceso es negativo lo convierte a cero
             decimal.Round(Math.Max(0, excessWeightKg), 2),
             BaggageSurchargeAmount.Create(quantitySurcharge),
             BaggageSurchargeAmount.Create(weightSurcharge),
             BaggageSurchargeAmount.Create(totalSurcharge),
             BaggageRegisteredAt.Create(registeredAt));
     }
-
+     // crea un registro nuevo sin validación de negocio, para casos donde ya se han calculado los valores y solo se quiere crear el objeto
     public static BaggageRecord CreateNew(
         int reservationId,
         int? ticketId,
